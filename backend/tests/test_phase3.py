@@ -55,7 +55,7 @@ def test_clinical_sanity_checks():
     
     # Check that readable feature names are populated properly
     known_readable_terms = [
-        "Heart Rate", "Systolic BP", "Diastolic BP", "Diastolic Blood Pressure", "Mean Arterial Pressure",
+        "Heart Rate", "Systolic BP", "Systolic Blood Pressure", "Diastolic BP", "Diastolic Blood Pressure", "Mean Arterial Pressure",
         "Respiration Rate", "Oxygen Saturation (SpO2)", "Temperature",
         "Serum Lactate", "White Blood Cell Count", "Serum Creatinine",
         "Platelet Count", "NEWS2 Score", "SOFA Score", "Patient Age"
