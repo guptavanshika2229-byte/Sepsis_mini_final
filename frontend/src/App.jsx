@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  HeartPulse, 
   Activity, 
-  ShieldAlert, 
+  Users, 
   Sliders, 
+  ShieldAlert, 
   MessageSquare, 
   Database, 
   RefreshCw, 
-  Users,
-  Trophy,
+  Trophy, 
   Sparkles,
   Zap,
-  Clock,
-  LayoutDashboard,
   CheckCircle2,
+  AlertTriangle,
+  Heart,
   ChevronRight,
-  AlertTriangle
+  Search,
+  Bot,
+  HelpCircle,
+  LayoutDashboard
 } from 'lucide-react';
 import { checkBackendHealth, fetchPatients, setForceMockMode } from './api/client';
 import PatientList from './components/PatientList';
@@ -26,7 +28,7 @@ import ChatPanel from './components/ChatPanel';
 import DemoGuideModal from './components/DemoGuideModal';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState('cockpit'); // 'cockpit' | 'roster'
+  const [activeTab, setActiveTab] = useState('timeline'); // 'timeline' | 'simulator' | 'explanation' | 'chat' | 'roster'
   const [selectedPatientId, setSelectedPatientId] = useState('P001');
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [isMockMode, setIsMockMode] = useState(false);
@@ -52,9 +54,9 @@ export default function App() {
     setForceMockMode(nextMock);
   };
 
-  const handleSelectPatient = (patientId, mode = 'cockpit') => {
+  const handleSelectPatient = (patientId, targetTab = 'timeline') => {
     setSelectedPatientId(patientId);
-    setViewMode(mode);
+    setActiveTab(targetTab);
   };
 
   const selectedPatient = patients.find(p => p.patient_id === selectedPatientId) || {
@@ -66,56 +68,47 @@ export default function App() {
     lead_time_hours: selectedPatientId === 'P001' ? 8.5 : 6.0
   };
 
-  const getRiskBadge = (level) => {
-    if (level === 'high') return <span className="clinical-badge badge-high"><AlertTriangle className="h-3.5 w-3.5" /> High Risk Deterioration</span>;
-    if (level === 'moderate') return <span className="clinical-badge badge-moderate"><ShieldAlert className="h-3.5 w-3.5" /> Moderate Escalation</span>;
-    return <span className="clinical-badge badge-low"><CheckCircle2 className="h-3.5 w-3.5" /> Stable Condition</span>;
-  };
+  const riskPct = Math.round(selectedPatient.current_risk * 100);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#070913] text-slate-100 font-sans selection:bg-rose-500 selection:text-white">
-      {/* Top Navigation & Command Bar */}
-      <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-50 px-6 py-3 flex items-center justify-between shadow-2xl">
-        <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 flex items-center justify-center shadow-lg shadow-rose-500/25 animate-pulse-glow">
-            <HeartPulse className="h-6 w-6 text-white" />
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans flex flex-col">
+      {/* Top App Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 px-6 py-3.5 flex items-center justify-between shadow-sm">
+        {/* App Logo & Name */}
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/20">
+            <Heart className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-1.5">
-                SEPSIS<span className="text-rose-500">EWS</span>
-              </h1>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 font-mono font-bold">
-                AI EARLY WARNING COCKPIT
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900">SepsisAI</h1>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
+                Early Warning App
               </span>
             </div>
-            <p className="text-xs text-slate-400 flex items-center gap-2">
-              <span>ICU Patient Deterioration Early Warning System</span>
-              <span className="text-slate-600">•</span>
-              <span className="text-amber-400 font-semibold flex items-center gap-1">
-                <Zap className="h-3 w-3" /> +7.08 Hours Lead-Time Gained
-              </span>
+            <p className="text-xs text-slate-500">
+              Predicting ICU patient deterioration <strong className="text-slate-700">+7.08 hours earlier</strong>
             </p>
           </div>
         </div>
 
-        {/* View Switcher & Demo Controls */}
+        {/* Demo Controls & Status */}
         <div className="flex items-center gap-3">
-          {/* Hero Quick Patient Switcher Pills */}
-          <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
-            <span className="text-[11px] font-bold text-slate-400 px-2 uppercase tracking-wider">Demo Patients:</span>
+          {/* Hero Quick Patient Switches */}
+          <div className="hidden md:flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+            <span className="text-slate-400 px-2 font-medium">Quick Select:</span>
             {[
-              { id: 'P001', label: 'P001 (Critical 88%)', color: 'text-rose-400 border-rose-500/40 bg-rose-500/10' },
-              { id: 'P002', label: 'P002 (Escalating 63%)', color: 'text-amber-400 border-amber-500/40 bg-amber-500/10' },
-              { id: 'P003', label: 'P003 (Stable 08%)', color: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' }
+              { id: 'P001', label: 'P001 (High 88%)', color: 'bg-rose-600 text-white shadow-sm' },
+              { id: 'P002', label: 'P002 (Mod 63%)', color: 'bg-amber-500 text-white shadow-sm' },
+              { id: 'P003', label: 'P003 (Stable 08%)', color: 'bg-emerald-600 text-white shadow-sm' }
             ].map(p => (
               <button
                 key={p.id}
-                onClick={() => handleSelectPatient(p.id, 'cockpit')}
-                className={`text-xs px-2.5 py-1 rounded-lg font-mono font-semibold transition border ${
+                onClick={() => handleSelectPatient(p.id, 'timeline')}
+                className={`px-3 py-1 rounded-lg font-semibold transition ${
                   selectedPatientId === p.id 
-                    ? p.color + ' shadow-md' 
-                    : 'text-slate-400 hover:text-slate-200 border-transparent hover:bg-slate-800'
+                    ? p.color 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
                 {p.label}
@@ -125,208 +118,202 @@ export default function App() {
 
           <button
             onClick={() => setIsDemoGuideOpen(true)}
-            className="text-xs px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white font-bold transition flex items-center gap-2 shadow-lg shadow-rose-500/20"
+            className="text-xs px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition flex items-center gap-2 shadow-md shadow-indigo-600/20"
           >
-            <Trophy className="h-4 w-4" /> Judges Presentation Guide
+            <Trophy className="h-4 w-4" /> Presentation Guide
           </button>
 
-          <div className="flex items-center gap-2 text-xs bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800">
-            <Database className="h-3.5 w-3.5 text-slate-400" />
+          <div className="flex items-center gap-2 text-xs bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600">
+            <Database className="h-4 w-4 text-slate-400" />
             {isBackendConnected && !isMockMode ? (
-              <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" /> Live FastAPI (8000)
+              <span className="text-emerald-700 font-semibold flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" /> Live Backend
               </span>
             ) : (
-              <span className="text-amber-400 font-semibold flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-amber-500" /> Standalone Mock API
+              <span className="text-amber-700 font-semibold flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-amber-500" /> Demo Mock Mode
               </span>
             )}
           </div>
 
           <button
             onClick={toggleMockMode}
-            className="text-xs p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition"
-            title="Toggle Live / Mock API Mode"
+            className="text-xs p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition"
+            title="Toggle Live / Mock API"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
       </header>
 
-      {/* Main View Shell Container */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+      {/* Main App Body */}
+      <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col md:flex-row gap-6">
         
-        {/* Navigation Mode Bar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/60 p-2 rounded-2xl border border-slate-800/80 backdrop-blur">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode('cockpit')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
-                viewMode === 'cockpit'
-                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-lg shadow-rose-500/10'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <LayoutDashboard className="h-4 w-4 text-rose-400" />
-              Unified Clinical Cockpit
-            </button>
-            <button
-              onClick={() => setViewMode('roster')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
-                viewMode === 'roster'
-                  ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-lg shadow-rose-500/10'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <Users className="h-4 w-4 text-rose-400" />
-              All Monitored Patients ({patients.length})
-            </button>
+        {/* Left App Sidebar Menu */}
+        <aside className="w-full md:w-64 flex flex-col gap-2 shrink-0">
+          <div className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">App Views</div>
+            
+            {[
+              { id: 'timeline', label: 'Risk & Timeline', icon: Activity, desc: 'Predicted risk graph' },
+              { id: 'simulator', label: 'Treatment Simulator', icon: Sliders, desc: 'What-if slider controls' },
+              { id: 'explanation', label: 'Why Risk is High', icon: ShieldAlert, desc: 'Key factor reasons' },
+              { id: 'chat', label: 'AI Health Assistant', icon: MessageSquare, desc: 'Ask questions' },
+              { id: 'roster', label: 'Patient Directory', icon: Users, desc: 'All 50 ICU patients' }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full text-left p-3 rounded-xl transition flex items-center gap-3 ${
+                    isActive
+                      ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                  }`}
+                >
+                  <div className={`p-2 rounded-lg ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm">{tab.label}</div>
+                    <div className="text-[11px] text-slate-400 font-normal">{tab.desc}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Active Patient Snapshot Indicator */}
-          <div className="flex items-center gap-3 text-xs bg-slate-950/80 border border-slate-800 px-3.5 py-1.5 rounded-xl">
-            <span className="text-slate-400 font-medium">Selected Patient:</span>
+          {/* Quick Active Patient Card */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Patient</div>
             <select
               value={selectedPatientId}
               onChange={(e) => setSelectedPatientId(e.target.value)}
-              className="bg-slate-900 text-slate-100 border border-slate-700 rounded-lg px-2.5 py-1 font-mono text-xs font-bold focus:outline-none focus:border-rose-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
             >
               {patients.map((p) => (
                 <option key={p.patient_id} value={p.patient_id}>
-                  {p.patient_id} — {p.risk_level.toUpperCase()} ({(p.current_risk * 100).toFixed(0)}%)
+                  Patient {p.patient_id} ({p.risk_level.toUpperCase()})
                 </option>
               ))}
             </select>
           </div>
-        </div>
+        </aside>
 
-        {/* View Mode 1: Integrated Command Center Cockpit */}
-        {viewMode === 'cockpit' && (
-          <div className="flex flex-col gap-6">
-            
-            {/* Active Patient Hero Banner & Risk Meter */}
-            <div className={`glass-card p-6 border flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 ${
-              selectedPatient.risk_level === 'high' ? 'glow-high' : selectedPatient.risk_level === 'moderate' ? 'glow-mod' : 'glow-low'
-            }`}>
+        {/* Main Content Area */}
+        <main className="flex-1 flex flex-col gap-6 min-w-0">
+          
+          {/* Big Clear Patient Overview Banner */}
+          {activeTab !== 'roster' && (
+            <div className="app-card p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border-l-8 border-l-rose-500">
               <div className="flex items-center gap-5">
-                {/* Circular Dial / Meter Graphic */}
-                <div className={`relative h-20 w-20 rounded-2xl flex flex-col items-center justify-center font-mono font-black text-2xl border shadow-xl ${
+                {/* Big Readable Risk Score Dial */}
+                <div className={`h-20 w-20 rounded-2xl flex flex-col items-center justify-center font-bold border shadow-sm ${
                   selectedPatient.risk_level === 'high' 
-                    ? 'bg-rose-500/15 border-rose-500/50 text-rose-400 shadow-rose-500/20' 
+                    ? 'bg-rose-50 border-rose-200 text-rose-700' 
                     : selectedPatient.risk_level === 'moderate'
-                    ? 'bg-amber-500/15 border-amber-500/50 text-amber-400 shadow-amber-500/20'
-                    : 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400 shadow-emerald-500/20'
+                    ? 'bg-amber-50 border-amber-200 text-amber-700'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-700'
                 }`}>
-                  <span>{(selectedPatient.current_risk * 100).toFixed(0)}%</span>
-                  <span className="text-[9px] font-sans font-bold uppercase tracking-wider text-slate-400">Risk Score</span>
+                  <span className="text-2xl">{riskPct}%</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider">Risk Score</span>
                 </div>
 
                 <div>
                   <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-black font-mono text-white tracking-tight">
+                    <h2 className="text-2xl font-extrabold text-slate-900">
                       Patient {selectedPatient.patient_id}
                     </h2>
-                    {getRiskBadge(selectedPatient.risk_level)}
+                    <span className={`app-badge ${
+                      selectedPatient.risk_level === 'high' ? 'badge-high' : selectedPatient.risk_level === 'moderate' ? 'badge-moderate' : 'badge-low'
+                    }`}>
+                      {selectedPatient.risk_level === 'high' ? '⚠️ High Deterioration Risk' : selectedPatient.risk_level === 'moderate' ? '⚡ Moderate Risk Escalation' : '✅ Stable Patient'}
+                    </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1 flex items-center gap-3">
-                    <span>Location: <strong className="text-slate-200">{selectedPatient.unit || 'Medical ICU'}</strong></span>
-                    <span>•</span>
-                    <span>Lead-Time Lead: <strong className="text-amber-400 font-mono">+{selectedPatient.lead_time_hours || 8.5} Hours Earlier Alert</strong></span>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Location: <strong className="text-slate-700">{selectedPatient.unit || 'Medical ICU Bed 04'}</strong> • 
+                    Early Alert Lead-Time: <strong className="text-indigo-600 font-bold">+{selectedPatient.lead_time_hours || 8.5} Hours Ahead</strong>
                   </p>
                 </div>
               </div>
 
-              {/* Pitch Lead-Time Highlight Callout */}
-              <div className="flex items-center gap-4 bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80 w-full lg:w-auto">
-                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                  <Sparkles className="h-5 w-5" />
+              {/* Easy-to-Read Plain English Explanation Banner */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 max-w-md">
+                <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mb-1">
+                  <Zap className="h-4 w-4 text-amber-500" />
+                  What this means:
                 </div>
-                <div>
-                  <div className="text-xs font-bold text-white flex items-center gap-2">
-                    Early Deterioration Warning Gained
-                    <span className="text-amber-400 font-mono text-xs">+7.08 Hours</span>
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    PyTorch BiGRU flags danger well before NEWS2/SOFA scores cross alert thresholds.
-                  </div>
-                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {selectedPatient.risk_level === 'high' 
+                    ? 'The AI model predicts a high likelihood of septic shock within 8 hours. Standard bedside scores (NEWS2) do not flag danger yet.'
+                    : 'Patient vitals are currently stable with low predicted probability of ICU escalation over the next 12 hours.'}
+                </p>
               </div>
             </div>
+          )}
 
-            {/* Split Canvas Workspace: Main Dashboard Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              
-              {/* Left Column (8 / 12): Interactive Timeline & SHAP Factors */}
-              <div className="lg:col-span-8 flex flex-col gap-6">
-                
-                {/* 1. Multimodal Risk Trajectory Timeline */}
-                <div className="glass-card p-6">
-                  <PatientTimeline 
-                    patientId={selectedPatientId} 
-                    onNavigateTab={() => {}} 
-                  />
-                </div>
-
-                {/* 2. SHAP Multimodal Feature Attribution Drivers */}
-                <div className="glass-card p-6">
-                  <ExplanationPanel 
-                    patientId={selectedPatientId} 
-                    onNavigateTab={() => {}} 
-                  />
-                </div>
-
-              </div>
-
-              {/* Right Column (4 / 12): Interactive Counterfactual Simulator & Chatbot */}
-              <div className="lg:col-span-4 flex flex-col gap-6">
-                
-                {/* 3. Live What-If Counterfactual Intervention Simulator */}
-                <div className="glass-card p-6">
-                  <InterventionSimulator 
-                    patientId={selectedPatientId} 
-                    onNavigateTab={() => {}} 
-                  />
-                </div>
-
-                {/* 4. Grounded Clinical AI Assistant */}
-                <div className="glass-card p-6">
-                  <ChatPanel 
-                    patientId={selectedPatientId} 
-                  />
-                </div>
-
-              </div>
-
+          {/* Render Active View Component */}
+          {activeTab === 'timeline' && (
+            <div className="app-card p-6">
+              <PatientTimeline 
+                patientId={selectedPatientId} 
+                onNavigateTab={(tab) => setActiveTab(tab)} 
+              />
             </div>
+          )}
 
-          </div>
-        )}
+          {activeTab === 'simulator' && (
+            <div className="app-card p-6">
+              <InterventionSimulator 
+                patientId={selectedPatientId} 
+                onNavigateTab={(tab) => setActiveTab(tab)} 
+              />
+            </div>
+          )}
 
-        {/* View Mode 2: All Monitored Patients Roster */}
-        {viewMode === 'roster' && (
-          <div className="glass-card p-6">
-            <PatientList
-              patients={patients}
-              selectedPatientId={selectedPatientId}
-              onSelectPatient={(id) => handleSelectPatient(id, 'cockpit')}
-            />
-          </div>
-        )}
+          {activeTab === 'explanation' && (
+            <div className="app-card p-6">
+              <ExplanationPanel 
+                patientId={selectedPatientId} 
+                onNavigateTab={(tab) => setActiveTab(tab)} 
+              />
+            </div>
+          )}
 
-      </main>
+          {activeTab === 'chat' && (
+            <div className="app-card p-6">
+              <ChatPanel 
+                patientId={selectedPatientId} 
+              />
+            </div>
+          )}
 
-      {/* Demo Presentation Guide Modal */}
+          {activeTab === 'roster' && (
+            <div className="app-card p-6">
+              <PatientList
+                patients={patients}
+                selectedPatientId={selectedPatientId}
+                onSelectPatient={(id) => handleSelectPatient(id, 'timeline')}
+              />
+            </div>
+          )}
+
+        </main>
+      </div>
+
+      {/* Presentation Guide Modal */}
       <DemoGuideModal
         isOpen={isDemoGuideOpen}
         onClose={() => setIsDemoGuideOpen(false)}
-        onNavigateTab={() => setViewMode('cockpit')}
-        onSelectPatient={(id) => handleSelectPatient(id, 'cockpit')}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+        onSelectPatient={(id) => handleSelectPatient(id, 'timeline')}
       />
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 px-6 py-4 text-center text-xs text-slate-500 flex items-center justify-between max-w-[1600px] mx-auto w-full">
-        <div>Sepsis & Patient Deterioration Multimodal Early Warning System</div>
-        <div className="text-slate-600 font-mono">PyTorch BiGRU • SHAP • Causal Simulator • FastAPI</div>
+      {/* Simple Footer */}
+      <footer className="bg-white border-t border-slate-200 px-6 py-4 text-center text-xs text-slate-500">
+        SepsisAI • Clinical Early Warning Decision Support System Prototype
       </footer>
     </div>
   );
